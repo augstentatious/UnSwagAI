@@ -66,3 +66,39 @@ def boot_sequence():
     
     # 5. Divider
     print(f"{RED}{'—' * 40}{RESET}")
+
+def monitor(iterable, desc="Training"):
+    """
+    A minimal, UnSwag-styled progress bar.
+    Replaces tqdm with something more 'industrial'.
+    """
+    total = len(iterable)
+    
+    # The 'Lion' cursor
+    cursor = "🦁" 
+    
+    print(f"\n{BOLD}{desc} initialized.{RESET}")
+    print(f"Offloading gradients to the ether...")
+    
+    start_time = time.time()
+    
+    for i, item in enumerate(iterable):
+        yield item
+        
+        # Update every few steps to save I/O
+        if i % 10 == 0 or i == total - 1:
+            percent = (i + 1) / total
+            bar_len = 30
+            filled_len = int(bar_len * percent)
+            
+            # The Bar
+            bar = f"{RED}█{RESET}" * filled_len + f"{CYAN}-{RESET}" * (bar_len - filled_len)
+            
+            # Rate
+            elapsed = time.time() - start_time
+            rate = (i + 1) / elapsed
+            
+            sys.stdout.write(f"\r{cursor} [{bar}] {percent:.0%} | {rate:.2f} it/s | {CYAN}1-Bit Mode{RESET}")
+            sys.stdout.flush()
+            
+    print(f"\n{GREEN}Cycle Complete.{RESET}\n")
