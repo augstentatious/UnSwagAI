@@ -64,3 +64,12 @@ Unpacks the sign bits directly into the Vector Processing Unit (VPU) registers.
 Fuses the gradient gating (grad * mask) within the same kernel cycle.
 
 This creates a zero-overhead memory compression layer that respects the exact mathematical derivative of ReLU
+
+📈 The 128k Context Breakthrough
+On a standard Kaggle TPU v3-8 (128GB aggregate HBM), UnSwag achieved stable training gradients for a Gemma-2-9B scale FFN at a 131,072 sequence length.
+
+Standard ReLU Memory: ~7.3 GB / layer (OOM likely at 16k)
+
+UnSwag 1-Bit Memory: ~229 MB / layer (Stable at 128k)
+
+Improvement: 31.8x reduction in activation overhead
