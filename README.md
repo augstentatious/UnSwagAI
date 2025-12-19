@@ -145,3 +145,5 @@ UnSwag exploits this by storing only the sign bits ($\text{sgn}(z)$) in a bit-pa
 
 🦁 Why this matters for the 9B Model
 While standard training requires parking ~7.3GB of float32 activations per layer for 128k context, UnSwag only parks ~229MB. This reclaimed HBM is what allows us to scale to massive context windows on "underpowered" 16GB TPU hardware.
+
+⚠️ Note on Data: The "Sophia Dynamic Data" used in the original benchmarks is proprietary research material. Users should provide their own .jsonl datasets (instruction/input/output format) to utilize the prepare_data pipeline.
