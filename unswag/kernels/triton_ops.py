@@ -111,6 +111,47 @@ def _pack_2bit_silu_kernel(
     out_idx = block_start // 4 + tl.arange(0, BLOCK_SIZE)
     out_mask = out_idx < (n_elements + 3) // 4
     tl.store(out_ptr + out_idx, packed_val, mask=out_mask)
+
+    @triton.jit
+def _unpack_2bit_backward_kernel(
+    grad_output_ptr,        # Pointer to incoming gradient (dL/dy)
+    packed_activation_ptr,  # Pointer to our 2-bit saved activations
+    grad_input_ptr,         # Pointer to output gradient (dL/dx)
+    n_elements,
+    BLOCK_SIZE: tl.constexpr,
+):
+    """
+    Reconstructs the SiLU gradient from 2-bit packed states.
+    States: 00 -> 0.0, 01 -> 0.5, 10 -> 1.0, 11 -> 1.0
+    """
+    pid = tl.program_id(0)
+    block_start = pid * BLOCK_SIZE * 4
+    offsets = block_start + tl.arange(0, BLOCK_SIZE) * 4
+
+    for i in range(4):
+        curr_idx = offsets + i
+        mask = curr_idx < n_elements
+
+        # 1. Load the incoming gradient (from the next layer)
+        grad_out = tl.load(grad_output_ptr + curr_idx, mask=mask, other=0.0)
+
+        # 2. Load the packed byte and extract the specific 2-bit state
+        byte_idx = curr_idx // 4
+        shift = (curr_idx % 4) * 2
+        packed_byte = tl.load(packed_activation_ptr + byte_idx, mask=mask, other=0)
+        two_bits = (packed_byte >> shift) & 0b11
+
+        # 3. Map states back to the piecewise derivative approximation
+        # 00 (x < -2): grad is ~0
+        # 01 (-2 < x < 0): grad is ~0.5 (the rising shoulder)
+        # 10/11 (x > 0): grad is ~1.0 (approaching identity)
+        grad_coeff = tl.where(
+            two_bits == 0, 0.0,
+            tl.where(two_bits == 1, 0.5, 1.0)
+        )
+
+        # 4. Chain rule: dL/dx = dL/dy * dy/dx
+        tl.store(grad_input_ptr + curr_idx, grad_out * grad_coeff, mask=mask)
     
     for i in range(8):
         curr_idx = offsets + i
