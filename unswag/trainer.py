@@ -1,3 +1,4 @@
+
 import torch
 import os
 import json
@@ -9,13 +10,13 @@ class UnSwagTrainer(Trainer):
     Custom Trainer optimized for UnSwag memory architecture.
     Enforces 8-bit AdamW and manages Gradient Checkpointing hooks.
     """
-    
+
     def __init__(self, *args, **kwargs):
         # Force 8-bit AdamW to save VRAM
         if "args" in kwargs and kwargs["args"].optim == "adamw_hf":
             print("🦁 UnSwagTrainer: Upgrading to 'paged_adamw_8bit'")
             kwargs["args"].optim = "paged_adamw_8bit"
-        
+
         super().__init__(*args, **kwargs)
         self.unswag_enabled = True
 
@@ -51,13 +52,13 @@ class UnSwagTrainer(Trainer):
     def save_model(self, output_dir: Optional[str] = None, _internal_call: bool = False):
         if output_dir is None: output_dir = self.args.output_dir
         super().save_model(output_dir, _internal_call)
-        
+
         # Save UnSwag Metadata
         unswag_config = {
             "unswag_version": "0.2.0",
             "protocol": "delhi-lux"
         }
-        
+
         if self.args.should_save:
             with open(os.path.join(output_dir, "unswag_config.json"), "w") as f:
                 json.dump(unswag_config, f, indent=4)

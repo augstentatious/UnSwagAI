@@ -1,6 +1,8 @@
+
 from .model import UnSwagModel
 from .trainer import UnSwagTrainer
 from .surgery import apply_unswag_surgery
+from .kv import UnSwagKV
 from .data import StreamingContextDataLoader
 
 # Optional Import: KV Cache (Handle missing dependency gracefully)

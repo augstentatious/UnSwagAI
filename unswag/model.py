@@ -1,3 +1,4 @@
+
 import torch
 import warnings
 from transformers import AutoModelForCausalLM, AutoConfig, BitsAndBytesConfig
@@ -9,7 +10,7 @@ class UnSwagModel:
     The UnSwag 'Steering Wheel'.
     Unified interface for loading, patching, and preparing models.
     """
-    
+
     SUPPORTED_ARCHITECTURES = {
         "llama": ["LlamaForCausalLM", "TinyLlamaForCausalLM"],
         "mistral": ["MistralForCausalLM"],
@@ -35,7 +36,7 @@ class UnSwagModel:
         if hasattr(config, "max_position_embeddings"):
             print(f"ℹ️ Scaling context from {config.max_position_embeddings} to {max_seq_length}")
             config.max_position_embeddings = max_seq_length
-            
+
         # 3. Quantization (BNB NF4)
         quantization_config = None
         if load_in_4bit:
@@ -59,7 +60,7 @@ class UnSwagModel:
         # 5. Apply UnSwag Surgery
         print(f"⚔️ Applying UnSwag Surgery (Mode: {mode})...")
         apply_unswag_surgery(model, mode=mode)
-        
+
         # 6. Gradient Checkpointing
         if use_gradient_checkpointing:
             model.gradient_checkpointing_enable()
@@ -78,15 +79,15 @@ class UnSwagModel:
     ):
         print("--- 🔧 Preparing for UnSwag Training ---")
         model = prepare_model_for_kbit_training(model)
-        
+
         if target_modules is None:
             target_modules = ["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"]
-            
+
         peft_config = LoraConfig(
             r=lora_r, lora_alpha=lora_alpha, target_modules=target_modules,
             lora_dropout=lora_dropout, bias="none", task_type="CAUSAL_LM", use_rslora=use_rslora
         )
-        
+
         model = get_peft_model(model, peft_config)
         model.print_trainable_parameters()
         return model
