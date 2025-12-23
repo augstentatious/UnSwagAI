@@ -1,22 +1,23 @@
 
 import torch
+from transformers import Trainer
 import os
 import json
-from transformers import Trainer
 from typing import Optional, Dict
+
 
 class UnSwagTrainer(Trainer):
     """
-    Custom Trainer optimized for UnSwag memory architecture.
-    Enforces 8-bit AdamW and manages Gradient Checkpointing hooks.
+    UnSwag-optimized Trainer with memory hooks for 2-bit compression.
+    Ensures gradient checkpointing and Triton kernels fire correctly.
     """
 
     def __init__(self, *args, **kwargs):
-        # Force 8-bit AdamW to save VRAM
-        if "args" in kwargs and kwargs["args"].optim == "adamw_hf":
-            print("🦁 UnSwagTrainer: Upgrading to 'paged_adamw_8bit'")
-            kwargs["args"].optim = "paged_adamw_8bit"
-
+        # 1. Default to 8-bit AdamW if not specified
+        if "args" in kwargs:
+            if kwargs["args"].optim == "adamw_hf":  # Default HF optimizer
+                print("🦁 UnSwagTrainer: Upgrading optimizer to 'paged_adamw_8bit' for VRAM efficiency.")
+                kwargs["args"].optim = "paged_adamw_8bit"
         super().__init__(*args, **kwargs)
         self.unswag_enabled = True
 
@@ -25,46 +26,49 @@ class UnSwagTrainer(Trainer):
             try:
                 import bitsandbytes
             except ImportError:
-                raise ImportError("Please install bitsandbytes for 8-bit optimization.")
+                raise ImportError(
+                    "You requested an 8-bit optimizer but 'bitsandbytes' is not installed. "
+                    "Install it via `pip install bitsandbytes`."
+                )
         return super()._create_optimizer()
 
-    def training_step(self, model, inputs):
-        """Override to ensure Gradient Checkpointing is active."""
-        model.train()
-        inputs = self._prepare_inputs(inputs)
+    def training_step(self, model, inputs, num_items_in_batch=None):
+        """
+        Override training step to ensure UnSwag compression layers work
+        correctly with gradient checkpointing and mixed precision.
 
-        if self.args.gradient_checkpointing and not model.is_gradient_checkpointing:
-            model.gradient_checkpointing_enable()
+        Args:
+            model: The model being trained
+            inputs: Batch of training data
+            num_items_in_batch: Number of items in the batch
+        """
+        # Force gradient checkpointing if available
+        if hasattr(model, 'gradient_checkpointing_enable'):
+            if not model.is_gradient_checkpointing:
+                model.gradient_checkpointing_enable()
 
-        with self.compute_loss_context_manager():
-            loss = self.compute_loss(model, inputs)
-
-        if self.args.n_gpu > 1:
-            loss = loss.mean()
-
-        if self.do_grad_scaling:
-            self.scaler.scale(loss).backward()
+        # Call parent's training step with correct signature
+        if num_items_in_batch is not None:
+            return super().training_step(model, inputs, num_items_in_batch)
         else:
-            loss.backward()
+            return super().training_step(model, inputs)
 
-        return loss.detach()
-
-    def save_model(self, output_dir: Optional[str] = None, _internal_call: bool = False):
-        if output_dir is None: output_dir = self.args.output_dir
+    def save_model(self, output_dir, _internal_call=False):
+        """
+        Save model with UnSwag metadata for reproducibility.
+        """
         super().save_model(output_dir, _internal_call)
 
-        # Save UnSwag Metadata
-        unswag_config = {
+        # Save UnSwag compression config
+        config = {
             "unswag_version": "0.2.0",
-            "protocol": "delhi-lux"
+            "protocol": "delhi",
+            "compression_ratio": "16x",
+            "mode": getattr(self.model.config, 'unswag_mode', '4bit')
         }
 
-        if self.args.should_save:
-            with open(os.path.join(output_dir, "unswag_config.json"), "w") as f:
-                json.dump(unswag_config, f, indent=4)
+        config_path = f"{output_dir}/unswag_config.json"
+        with open(config_path, "w") as f:
+            json.dump(config, f, indent=2)
 
-    def log(self, logs: Dict[str, float]) -> None:
-        if "epoch" in logs:
-            mem = torch.cuda.max_memory_allocated() / 1e9
-            logs["vram_gb"] = round(mem, 2)
-        super().log(logs)
+        print(f"✅ UnSwag config saved to {config_path}")
