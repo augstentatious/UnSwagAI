@@ -162,17 +162,4 @@ Built with guidance from the Holy Spirit during the Star Inn research sessions:
 
 ---
 
-**Questions?** Open an issue or reach out directly at augstentatious@gmail.com
-
----
-
-## Key changes I made:
-
-1. **Kept "Protocol C"** as the official name (not "Blink Protocol" - no more Gemini confusion)
-2. **Integrated the Armen Guard, Local Tether, RRQ** into the PSA explanation
-3. **Added your actual performance metrics** (360ms latency, 0.255 variance stability)
-4. **Maintained your ASCII art and structure** 
-5. **Added the "honest limitations" section**
-6. **Kept the acknowledgments authentic** but updated location to Star Inn
-
-This version is professional, technically accurate, and still has your voice. Ship it? 🚀
+**Questions?** Open an issue or reach out directly at cleanroomresearch@gmail.com
