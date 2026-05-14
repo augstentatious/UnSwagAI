@@ -1,184 +1,74 @@
 # UnSwag v0.3: Protocol C
 
-```text
-    _    _       _______
-   | |  | |     / ______|
-   | |  | |_ __| (___ __      ____ _  __ _
-   | |  | | '_ \\___ \\ \ /\ / / _` |/ _` |
-   | |  | | | | |___) |\ V  V / (_| | (_| |
-    \____/|_| |_|____/  \_/\_/ \__,_|\__, |
-                                      __/ |
-    .---------------------------.    |___/
-    |  [|||||||||] [|||||||||]  |
-    |  """"""""""" """""""""""  |__
-    `---------------------------'  |
-       `---------------------------'
+**Packet-Switched Attention for Stable 2-Bit Quantization**
 
-   [!] STATUS: RESEARCH-ALPHA  // v0.3.0 "Protocol C"
-   [!] ARCH: HARDWARE-NATIVE HYBRID (CONV1D + SPARSE ATTN)
-   [!] TARGET: COMMODITY GPU (T4/RTX) & CLOUD TPU (v5e)
-```
+[!] STATUS: ACTIVE DEVELOPMENT
+[!] ARCH: HARDWARE-NATIVE HYBRID (CONV1D + SPARSE ATTN)
+[!] TARGET: COMMODITY GPU (T4/RTX) & CLOUD TPU (v5e)
 
-> "Precision through architecture, not parameter count."
-
-## 🎯 Overview
-
-UnSwag v0.3.0 introduces **Protocol C**, a hardware-efficient architecture that addresses stability challenges in 2-bit quantized mixture-of-experts models through **Packet-Switched Attention (PSA)**. By discretizing token processing into semantic routing packets, UnSwag focuses compute only where it matters—ignoring structural noise and maintaining numerical stability.
+*Precision through architecture, not parameter count.*
 
 ---
 
-## 🚀 Core Architecture
+## Overview
 
-### **Protocol C: Packet-Switched Attention**
+UnSwag addresses stability challenges in 2-bit quantized mixture-of-experts models through **Packet-Switched Attention (PSA)**. By discretizing token processing into semantic routing packets, UnSwag focuses compute only where it matters—ignoring structural noise and maintaining numerical stability on commodity hardware.
 
-Hardware-native semantic routing with three core stabilization mechanisms:
+---
 
-### 1. **Armen Guard (Dynamic Variance Router)**
-Monitors input correlation patterns (variance energy >0.85) and applies orthogonal phase corrections to prevent numerical instability in routing decisions.
+## Core Architecture
 
-**What it solves:** The "correlation blow-up" problem where similar input tokens create unstable routing distributions in quantized space.
+### 1. ARMen Guard (Dynamic Variance Router)
 
-### 2. **Local Tether (Syntactic Stabilization)**
+**On guard for ARM.** Monitors input correlation patterns and applies orthogonal phase corrections to prevent numerical instability in routing decisions. Keeps variance stable so your 2-bit MoE doesn't choke on memory-constrained devices.
+
+**Solves:** The "correlation blow-up" problem where similar input tokens create unstable routing distributions in quantized space.
+
+### 2. Local Tether (Syntactic Stabilization)
+
 A lightweight depthwise-separable CNN path that preserves local syntactic structure during aggressive quantization.
 
 | Packet | Function | Performance |
-|--------|----------|------------|
-| **⚡ 01** | Bypasses O(N²) attention for hardware-optimized Depthwise-Separable Convolutions | Handles syntax at hardware speed |
-| **🧠 10** | Updates differentiable Adaptive Summary Register (O(1) memory) | Maintains sequence "gist" |
-| **🎯 11** | High-density semantic markers with Causal Sparse Attention | Links critical context |
-| **💨 00** | High-confidence noise pruned from KV-Cache | ~40% memory reduction |
+|--------|----------|-------------|
+| `01` | Depthwise-Separable Convolutions (bypasses O(N²) attention) | Handles syntax at hardware speed |
+| `10` | Updates Adaptive Summary Register (O(1) memory) | Maintains sequence gist |
+| `11` | High-density semantic markers with Causal Sparse Attention | Links critical context |
+| `00` | High-confidence noise, pruned from KV-Cache | ~40% memory reduction |
 
-### 3. **Recursive Residual Quantization (RRQ)**
-Progressive error correction that refines quantization residuals across routing passes, similar to vector quantization in audio codecs.
+### 3. Recursive Residual Quantization (RRQ)
+
+Progressive error correction that refines quantization residuals across routing passes, analogous to vector quantization in audio codecs.
 
 ---
 
-## 📊 Performance Characteristics
-
-**Current Status:** Functional prototype (Star Inn Research Series)
+## Performance
 
 | Metric | Protocol C (PSA) | Standard Attention |
 |--------|------------------|-------------------|
-| **Pruning Rate (00)** | ~13.8% | 0.0% |
-| **Attention Density (11)** | ~25.0% | 100.0% |
-| **Cold-start Latency** | ~360ms (high-dim) | Variable |
-| **Variance Stability** | 0.255 (Armen Guard active) | N/A |
-| **Router Gradient Flow** | ✅ Gumbel-Softmax | N/A |
+| Pruning Rate (00) | ~13.8% | 0.0% |
+| Attention Density (11) | ~25.0% | 100.0% |
+| Variance Stability | 0.255 (ARMen Guard active) | N/A |
+| Router Gradient Flow | ✅ Gumbel-Softmax | N/A |
+
+**Verified Speedup:** 6.31x over dense baseline (0.74ms vs 4.71ms per pass at 10% density).
 
 ---
 
-## 🚀 Legacy Features (v0.2.0)
+## The Protocol Suite
 
-UnSwag maintains industry-leading activation memory reduction via low-bit structural isomorphisms:
+UnSwag supports multiple hardware targets through a unified API:
 
-- ✅ **UnSwagModel**: Unified API with `.from_pretrained()` and `.for_training()`
-- ✅ **UnSwagTrainer**: Custom HuggingFace trainer with 8-bit optimizers
-- ✅ **StreamingContextDataLoader**: Efficient context data streaming
-- ✅ **1-Bit Isomorphism**: 32x activation memory reduction
-
----
-
-## 🦁 The Protocol Suite
-
-### **Protocol C: "Packet Switched Attention"** *(CURRENT)*
-- **Target:** All Hardware
-- **Math:** 2-Bit Semantic Routing with Variance Stabilization
-- **Engine:** Hybrid Conv1D / Sparse Attention
-- **Use Case:** Long-context inference with numerical stability
-
-### **Protocol A: "Alpha Protocol"** (GPU)
-- **Target:** NVIDIA GPUs (T4, A100, H100)
-- **Math:** 2-Bit SiLU Isomorphism (Sign + Magnitude)
-- **Engine:** Custom Triton v3 Kernels
-
-### **Protocol B: "Bravo Protocol"** (TPU)
-- **Target:** Google TPUs (v3, v4, v5e)
-- **Math:** 1-Bit ReLU Isomorphism (Sign Only)
-- **Engine:** JAX / Pallas / XLA
+| Protocol | Target | Math | Engine |
+|----------|--------|------|--------|
+| **Protocol C** (CURRENT) | All Hardware | 2-Bit Semantic Routing + Variance Stabilization | Hybrid Conv1D / Sparse Attention |
+| **Protocol A** (GPU) | NVIDIA T4, A100, H100 | 2-Bit SiLU Isomorphism | Custom Triton v3 Kernels |
+| **Protocol B** (TPU) | Google TPU v3, v4, v5e | 1-Bit ReLU Isomorphism | JAX / Pallas / XLA |
 
 ---
 
-## 📦 Installation
+## Installation
 
 ```bash
 git clone https://github.com/augstentatious/unswagai
 cd unswagai
 pip install -e .
-```
-
----
-
-## 🛡️ Mathematical Foundation
-
-### Packet-Switched Attention with Variance Control
-
-PSA replaces dense attention $A = \text{softmax}(\frac{QK^T}{\sqrt{d}})$ with a sparse routing function $R(h_t)$ that includes dynamic stability corrections.
-
-**For tokens where $R(h_t) = 01$ (Local Tether):**
-
-$$h_t^{\text{out}} = \text{LayerNorm}(\text{Pointwise}(\text{Depthwise-Conv}(h_t)))$$
-
-This moves local complexity from $O(N^2)$ to $O(N \cdot k)$, short-circuiting the Transformer where syntax is rigid and global context is unnecessary.
-
-**For tokens where $R(h_t) = 10$ (Global Anchor):**
-
-$$R_{\text{new}} = R_{\text{old}} + \alpha \cdot (h_{10} - R_{\text{old}})$$
-
-The register maintains an exponential moving average of sequence state in $O(1)$ memory.
-
-**Armen Guard Stabilization:**
-
-When input covariance exceeds threshold, applies orthogonal correction to prevent quantization instability.
-
----
-
-## 🎯 Implementation Philosophy
-
-UnSwag prioritizes **architectural solutions over parameter scaling**—what we call "hygiene-native" design:
-
-- **Isolation:** Modules operate independently to contain numerical errors
-- **Efficiency:** Hardware-native operations (bit-shifts, conditional logic) over floating-point
-- **Measurability:** Every component has quantifiable stability metrics
-
----
-
-## 🚧 Current Limitations
-
-- Latency optimization ongoing (targeting <200ms cold start)
-- Benchmark validation against standard MoE baselines in progress
-- Triton kernel implementation for Widely-Linear layers under development
-
----
-
-## 🙏 Acknowledgments
-
-Built with guidance from the Holy Spirit during the Star Inn research sessions:
-- **Jesus Christ** - For the inspiration
-- **My Mom** - For the foundation  
-- **Star Inn Staff** - For the space
-
-**Maintained by John Augustine Young**  
-*Forged in The Clean Room. Newport Beach, CA.*
-
----
-
-**Questions?** Open an issue or reach out directly at cleanroomresearch@gmail.com
-
----
-### 🟢 Research Log: The Newport Sprint
-**Date:** December 28, 2025
-**Location:** Star Inn, Newport Beach, CA
-**Status:** CLAIM VERIFIED (6.31x)
-
-**The Hypothesis:**
-That 2-bit quantization instability is a routing problem, not a precision problem.
-That 90% of tokens in a low-precision stream are noise (00 packets) and can be pruned before compute.
-
-**The Result:**
-- **Baseline (Dense):** ~4.71ms / pass
-- **Protocol C (10% Density):** ~0.74ms / pass
-- **Speedup:** 6.31x
-
-**Conclusion:**
-We don't need more parameters. We need better architecture.
-The Clean Room is closed.
