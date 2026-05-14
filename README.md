@@ -20,7 +20,7 @@ UnSwag addresses stability challenges in 2-bit quantized mixture-of-experts mode
 
 ### 1. ARMen Guard (Dynamic Variance Router)
 
-**On guard for ARM.** Monitors input correlation patterns and applies orthogonal phase corrections to prevent numerical instability in routing decisions. Keeps variance stable so your 2-bit MoE doesn't choke on memory-constrained devices.
+Monitors input correlation patterns and applies orthogonal phase corrections to reduce routing instability in quantized space. The goal is to keep variance bounded during aggressive 2-bit routing on memory-constrained devices.
 
 **Solves:** The "correlation blow-up" problem where similar input tokens create unstable routing distributions in quantized space.
 
@@ -69,6 +69,15 @@ UnSwag supports multiple hardware targets through a unified API:
 ## Installation
 
 ```bash
-git clone https://github.com/augstentatious/unswagai
-cd unswagai
+git clone https://github.com/augstentatious/UnSwagAI.git
+cd UnSwagAI
 pip install -e .
+```
+
+## Validation
+
+```bash
+python benchmark_proof.py
+```
+
+The benchmark compares Protocol C's sparse pathway against a dense baseline. Reported speedups are hardware- and density-dependent; reproduce on the target GPU/TPU before treating the numbers as deployment claims.

@@ -20,7 +20,7 @@ def run_final_benchmark():
     dim = 512
     N = 4096
     
-    print(f"🌌 VALIDATING STAR INN CLAIM (6-25x) | Device: {device}")
+    print(f"Validating Protocol C benchmark | Device: {device}")
     
     model = ProtocolCModel(dim=dim, density=0.10).to(device)
     baseline = DenseBaseline(dim).to(device)
@@ -44,15 +44,17 @@ def run_final_benchmark():
     # Benchmark
     start = time.time()
     for _ in range(500): _ = compiled_baseline(xr)
-    torch.cuda.synchronize()
+    if device == 'cuda':
+        torch.cuda.synchronize()
     t_base = (time.time() - start) / 500 * 1000
 
     start = time.time()
     for _ in range(500): _ = compiled_model(xr, xi, u_b, w_b)
-    torch.cuda.synchronize()
+    if device == 'cuda':
+        torch.cuda.synchronize()
     t_blink = (time.time() - start) / 500 * 1000
 
-    print(f"⚡ SPEEDUP VERIFIED: {t_base / t_blink:.2f}x")
+    print(f"Observed speedup: {t_base / t_blink:.2f}x")
 
 if __name__ == "__main__":
     run_final_benchmark()
